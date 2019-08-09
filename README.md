@@ -1,26 +1,17 @@
-# refactor-prioritizer
+# perforce-refactor-prioritizer
 
-This is an excellent package.
+If you're working in a large codebase and you're not sure where to focus your refactoring efforts, this tool can help you by highlighting which files are most frequently implicated when defects arise.
+
+This is a CLI tool that accepts a start date in the form 'YYYY/MM/DD'. Given that starting date, the tool will look through all submitted changelists from then until now, and isolate any that mention a Rally defect number. For each of those changelists, it checks which files were touched as part of fixing that defect. The end product is a CSV file sorted from most-touched to least-touched files, indicating how many changelists touched each file. (only includes files that were touched 2 or more times).
 
 ## Installation
-
-```bash
-npm install refactor-prioritizer
-```
+`npm i -g perforce-refactor-prioritizer`
 
 ## Usage
+From the source directory:
+`npm start -- 2018/08/08`
 
-```javascript
-var excellentPkg = require('refactor-prioritizer');
-// Everything is now excellent.
-```
+From the cmd line after installation:
+`perforce-refactor-prioritizer 2018/08/08`
 
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)
+Then wait for it to finish and check out the CSV file in `./results/`
