@@ -1,4 +1,4 @@
-# perforce-refactor-prioritizer
+# perforce-refactoring-prioritizer
 
 If you're working in a large codebase and you're not sure where to focus your refactoring efforts, this tool can help you by highlighting which files are most frequently implicated when defects arise.
 

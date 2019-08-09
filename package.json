@@ -1,5 +1,5 @@
 {
-  "name": "perforce-refactor-prioritizer",
+  "name": "perforce-refactoring-prioritizer",
   "version": "1.0.0",
   "description": "",
   "main": "./build/main.js",
