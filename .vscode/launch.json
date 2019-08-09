@@ -45,7 +45,7 @@
             "protocol": "inspector",
             "args": [
                 "${workspaceFolder}/src/main.ts",
-                "2019/08/08"
+                "2018/08/08"
             ],
             "cwd": "${workspaceRoot}",
             "runtimeArgs": [
