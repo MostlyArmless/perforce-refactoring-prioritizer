@@ -1,4 +1,4 @@
-# perforce-refactor-prioritizer
+# perforce-refactoring-prioritizer
 
 If you're working in a large codebase and you're not sure where to focus your refactoring efforts, this tool can help you by highlighting which files are most frequently implicated when defects arise.
 
@@ -6,7 +6,7 @@ This is a CLI tool that accepts a start date in the form 'YYYY/MM/DD'. Given tha
 
 ## Installation
 
-`npm i -g perforce-refactor-prioritizer`
+`npm i -g perforce-refactoring-prioritizer`
 
 ## Usage
 
@@ -14,6 +14,6 @@ From the source directory:
 `npm start -- 2019/08/08`
 
 From the cmd line after installation:
-`perforce-refactor-prioritizer 2019/08/08`
+`perforce-refactoring-prioritizer 2019/08/08`
 
 Then wait for it to finish and check out the CSV file in `./results/`
