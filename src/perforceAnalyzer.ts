@@ -7,28 +7,46 @@ export class RefactoringPrioritizer {
     private startDate: string;
     private numChangelistsProcessed: number;
     private numDefectsProcessed: number;
+    private isFirstP4ChangeChunk: boolean;
+    private p4ChangesLastLine: string;
+    private isFirstP4FilesChunk: boolean;
+    private p4FilesLastLine: string;
 
     constructor(startDate: string) {
         this.defectsPerFile = new Map<string, number>();
         this.startDate = startDate;
         this.numChangelistsProcessed = 0;
         this.numDefectsProcessed = 0;
+        this.isFirstP4ChangeChunk = true;
+        this.p4ChangesLastLine = "";
+        this.p4FilesLastLine = "";
     }
 
-    private onP4Changes(p4ProcChanges: ChildProcess): Promise<any> {
+    private onP4Changes(p4ProcChanges: ChildProcess): Promise<Promise<any>[]> {
         return new Promise((resolve, reject) => {
             p4ProcChanges.stdout.on('data', async data => {
                 const lines = data.toString().split('\n');
+                let line = "";
                 let promises: Promise<any>[] = [];
-                lines.forEach(line => {
-                    this.numChangelistsProcessed++;                    
+                for (let i = 0; i < lines.length; i++) {
+                    line = lines[i];
+                    if (i === 0 && !this.isFirstP4ChangeChunk) {
+                        // This is the first line of a new chunk, we need to concatenate this first line with the partial line from the last chunk
+                        line = this.p4ChangesLastLine + line;
+                    }
+                    
+                    this.numChangelistsProcessed++;
                     if (this.isChangelistADefectFix(line)) {
                         const clNumber = this.getChangelistNumber(line);
                         promises.push(this.updateFileDefectMap(clNumber));
                     }
-                });
-
-                resolve(Promise.all(promises));
+                }
+                
+                // Save the last partial line of this chunk to be concatenated with the first partial line of the next chunk
+                this.p4ChangesLastLine = line;
+                this.isFirstP4ChangeChunk = false;
+                console.log(`Done p4Changes`);
+                resolve(promises);
             });
         });
     }
@@ -37,13 +55,26 @@ export class RefactoringPrioritizer {
         return new Promise((resolve, reject) => {
             p4ProcFiles.stdout.on('data', data => {
                 const lines = data.toString().split('\n');
-                lines.forEach(line => {
+                
+                let line = "";
+                for (let i = 0; i < lines.length; i++) {
+                    line = lines[i];
                     if (line === "") {
-                        return;
+                        break;
                     }
+
+                    if (i === 0 && !this.isFirstP4FilesChunk) {
+                        // This is the first line of a new chunk, we need to concatenate this first line with the partial line from the last chunk
+                        line = this.p4FilesLastLine + line;
+                    }
+
                     this.numDefectsProcessed++;
 
                     const matchResult = line.match(/([^#]+)#\d+ - /);
+                    if (!matchResult) {
+                        // This just means we reached the end of the chunk and found an incomplete line
+                        continue;
+                    }
                     const fileName = matchResult[1];
                     const defectsOnThisFile = this.defectsPerFile.get(fileName);
                     if (defectsOnThisFile) {
@@ -52,7 +83,11 @@ export class RefactoringPrioritizer {
                     else {
                         this.defectsPerFile.set(fileName, 1);
                     }
-                });
+                }
+                
+                this.p4FilesLastLine = line;
+                this.isFirstP4FilesChunk = false;
+                console.log(`Done p4Files`);
                 resolve();
             });
         });
@@ -65,6 +100,7 @@ export class RefactoringPrioritizer {
                     resolve();
                 }
                 else {
+                    console.warn(`NON-ZERO exit code for process PID ${childProc.pid}`);
                     reject();
                 }
             });
@@ -81,9 +117,13 @@ export class RefactoringPrioritizer {
         return clNum;
     }
 
-    private async updateFileDefectMap(clNumber: number): Promise<void> {
+    private async updateFileDefectMap(clNumber: number): Promise<any> {
+        console.log(`Spawning p4 files process...`);
         let p4ProcFiles = spawn('p4.exe', ['files', `@=${clNumber}`]);
-        return this.onP4Files(p4ProcFiles);
+        let promises: Promise<any>[] = [];
+        promises.push(this.onP4Files(p4ProcFiles));
+        promises.push(this.onChildProcExit(p4ProcFiles));
+        return promises;
     }
 
     private isChangelistADefectFix(line: string): boolean {
@@ -100,11 +140,19 @@ export class RefactoringPrioritizer {
         promises.push(this.onChildProcExit(p4ProcChanges));
 
         await Promise.all(promises);
+
+        const msPerNs = BigInt(1e6);
         const endTime = process.hrtime.bigint();
-        const durationMs = (endTime - startTime) / BigInt(1e6);
-        const rate = durationMs / BigInt(this.numChangelistsProcessed);
-        console.log(`Total runtime = ${durationMs} ms, or about ${rate} ms/changelist`);
+        const durationMs = (endTime - startTime) / msPerNs;
+        const averageRate = durationMs / BigInt(this.numChangelistsProcessed);
+        const defectRate = durationMs / BigInt(this.numDefectsProcessed);
+        console.log(`Total runtime = ${durationMs} ms`);
+        console.log(`Processed at ${averageRate} ms/changelist`);
+        console.log(`Processed at ${defectRate} ms/defect`);
         this.logResultsToFile();
+        const logTime = process.hrtime.bigint();
+        const logDuration = (logTime - endTime) / msPerNs;
+        console.log(`Spent an additional ${logDuration} ms logging the results.`);
         console.log(`DONE`);
     }
 
@@ -126,7 +174,6 @@ export class RefactoringPrioritizer {
                 break;
             }
             const logString = `"${dictEntry[0]}",${dictEntry[1]}`;
-            console.log(logString);
             fse.appendFileSync(logfile, logString + '\n');
         }
     }
