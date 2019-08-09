@@ -1,0 +1,18 @@
+{
+    "compileOnSave": true,
+    "compilerOptions": {
+        // "lib": ["es2018"],
+        // "types": ["node"],
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "allowSyntheticDefaultImports": true,
+        "noErrorTruncation": true,
+        "noUnusedLocals": true,
+        "target": "esnext",
+        "outDir": "./build",
+    },
+    "typeAcquisition": {
+        "include": ["src/**/*.ts"],
+        "exclude": ["node_modules"]
+    }
+}

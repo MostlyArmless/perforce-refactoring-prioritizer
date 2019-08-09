@@ -1,0 +1,6 @@
+# Ignore node_modules anywhere in the directory tree
+**/node_modules/
+# Ignore the outputs of tsc
+/build/
+*.csv
+/results/
